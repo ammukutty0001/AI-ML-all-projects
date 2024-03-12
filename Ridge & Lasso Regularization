@@ -1,0 +1,648 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import argparse
+
+def data_generate(dataset_filename):
+    '''
+    Generates the data, returns X and Y in the appropriate shape.
+    Return: A dictionary containing X_train, Y_train, X_test and Y_test
+    '''
+    data = pd.read_csv(dataset_filename)
+
+    total_samples = data.shape[0]
+    train_ratio = 0.8
+    random_indices = np.random.permutation(total_samples)
+    train_set_size = int(train_ratio * total_samples)
+
+    train_indices =  random_indices[:train_set_size]
+    test_indices = random_indices[train_set_size:]
+
+    data.iloc[train_indices], data.iloc[test_indices] 
+    X_train = (data.iloc[train_indices].iloc[:,:-1]).to_numpy()     # Design matrix for train data 
+    y_train = (data.iloc[train_indices].iloc[:,-1]).to_numpy()      # Labels for train data
+    y_train = y_train.reshape((y_train.shape[0],1))
+
+    X_test = (data.iloc[test_indices].iloc[:,:-1]).to_numpy()       # Design matrix for test data
+    y_test = (data.iloc[test_indices].iloc[:,-1]).to_numpy()        # Labels for test data
+    y_test = y_test.reshape((y_test.shape[0],1))
+
+    return {'X_train': X_train, 'Y_train':y_train,
+            'X_test': X_test, 'Y_test': y_test}
+
+
+def create_weights(data_dictionary, lambda_val):
+    '''
+    Creates the weights matrix using the closed form solution of ridge regression
+    Input:
+        data_dictionary: A dictionary containing X_train, Y_train, X_test and Y_test
+        lambda_val: The hyperparameter value (of lambda) for the ridge regression
+    Output: The weights matrix
+    '''
+
+    weights = None
+
+    # TODO : Add the code to find the weights vector for a given lambda value
+    X_tr = data_dictionary["X_train"]
+    print(X_tr)
+
+    Y_tr = data_dictionary["Y_train"]
+     
+
+    X_tr = np.array(X_tr)
+    Y_tr = np.array(Y_tr)
+
+    g = X_tr.transpose()
+    h = np.matmul(g,X_tr)
+
+    n = int(len(h[0]))
+    print(n)
+
+    I = np.identity(n,dtype=int)
+    I = lambda_val*I
+
+    j = np.linalg.inv(h+I)
+
+    j = np.matmul(j,g)
+
+    j = np.matmul(j,Y_tr)
+
+    weights = j
+
+    print(weights)
+   
+    pass
+    
+    # END TODO
+    
+    return weights
+
+    
+def generate_test_error(data_dictionary, weights):
+    '''
+    Generates the test error value for a particular weights matrix
+    Input:
+        data_dictionary: A dictionary containing X_train, Y_train, X_test and Y_test
+        weights: The weights matrix generated through create_weights function
+    Output: 
+        The test error [float]
+    '''
+
+    test_error = None
+
+    # TODO : Add the code to find the test error value for a given weights vector
+    
+    Y_tst = data_dictionary["Y_test"]
+    X_tst = data_dictionary["X_test"]
+
+    p = Y_tst - np.matmul(X_tst,weights)
+
+    q = np.square(p)
+
+
+    avg = float(np.mean(q))
+
+    test_error  = avg
+    
+    pass
+    
+    # END TODO
+    
+    return test_error
+
+
+def find_optimal_lambda(error_array, lambda_array):
+    '''
+    Return the optimal value of hyperparameter lambda, which minimizes the test error
+    Input:
+        error_array: Array of the found test errors
+        lambda_array: Array of the lambda values used
+    '''
+
+    optimal_lambda = None
+
+    # TODO : Find the best value of hyperparameter lambda
+    
+    
+
+    n = len(error_array)
+    
+    min_index = np.argmin(error_array)
+
+
+    optimal_lambda = lambda_array[min_index]
+
+
+    pass
+    
+    # END TODO
+
+    return optimal_lambda
+
+
+def plot_errors(error_array, lambda_array):
+    '''
+    Plots test error vs lambda and saves it to 'test_errors.png' (UNGRADED)
+    Input:
+        error_array: Array of the found test errors
+        lambda_array: Array of the lambda values used
+    '''
+
+    # TODO : Add the code to plot the errors vs lambda, and save it to 'test_errors.png'
+
+    plt.plot(lambda_array, error_array, marker='.', linestyle='-', color='b')
+    plt.xlabel('Lambda')
+    plt.ylabel('Test Error')
+    plt.title('Test Error vs Lambda')
+    plt.grid(True)
+    
+    # Save the plot to 'test_errors.png'
+    plt.savefig('test_errors.png')
+
+    # Display the plot
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+    pass 
+    
+    # END TODO
+
+
+if __name__=="__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset_filename', type=str, default='dataset.csv', 
+                        help="Name of the dataset file to be used" )
+    parser.add_argument('--weights_file', type=str, default='weights.csv', 
+                        help="Name of the file where weights will be saved")
+    parser.add_argument('--error_file', type=str, default='errors.csv', 
+                        help="Name of the file where errors will be saved")
+    parser.add_argument('--hidden', action='store_true', help="Evaluate on hidden test set")
+    args = parser.parse_args()
+    
+    if args.hidden:
+        args.dataset_filename = "hidden_" + args.dataset_filename
+        args.weights_file = "hidden_" + args.weights_file
+        args.error_file = "hidden_" + args.error_file
+    
+    np.random.seed(20)
+    data_dictionary = data_generate(args.dataset_filename)
+    lambda_array = []
+    weights_array = []
+    error_array = []
+    
+    # Perform regression for different values of hyperparamter lambda
+
+    for lam in np.arange(0, 2, 0.04):
+        lambda_array.append(np.round(lam, 4))
+        w = create_weights(data_dictionary, lam)
+        error = generate_test_error(data_dictionary, w)
+        weights_array.append(w)
+        error_array.append(error)
+    
+    # Print optimal value of hyperparameter lambda
+        
+    error_array = np.array(error_array)
+    weights_array = np.squeeze(np.array(weights_array), axis=-1)
+    optimal_lambda = find_optimal_lambda(error_array, lambda_array)
+    print(optimal_lambda)
+
+    # Save generated weights and errors
+
+    df_lambda = pd.DataFrame(lambda_array, columns=["lambda"])
+
+    column_names = [f"coeff_feature_{i}" for i in range(1, len(weights_array[0]) + 1)]
+    df_weights = pd.DataFrame(weights_array, columns=column_names)
+
+    df_weights = pd.concat([df_lambda, df_weights], axis=1)
+    df_weights.to_csv(args.weights_file, index=False)
+
+    df_error = pd.DataFrame(error_array, columns=["error"])
+    df_error = pd.concat([df_lambda, df_error], axis=1)
+    df_error.to_csv(args.error_file, index=False)
+
+    if not args.hidden:
+        plot_errors(error_array, lambda_array)
+    
+
+
+
+import numpy as np
+import torch
+import pandas as pd
+import matplotlib.pyplot as plt
+import argparse
+
+def train_test_split(dataframe):
+    total_samples = dataframe.shape[0]
+    train_ratio = 0.8
+    random_indices = np.random.permutation(total_samples)
+    train_set_size = int(train_ratio * total_samples)
+    train_indices = random_indices[:train_set_size]
+    test_indices = random_indices[train_set_size:]
+    return dataframe.iloc[train_indices], dataframe.iloc[test_indices]
+
+
+def lasso_loss(X, Y, w, lambd):
+    '''
+    @params
+        X : 2D tensor of size(n,d)
+        n : no of samples for the X dataset
+        d : dimension of each sample vector x(i)
+        Y : 1D tensor of size(n,1)
+        w : 1D tensor of size(d,1)
+        lambd : regularization parameter
+    return loss : np.float64 : scalar real value
+    '''
+
+    w = w.double()
+    loss = None
+
+    # Student code start TASK 1 : Write lasso-loss in form of X, Y, w matrices
+    # Please take care of normalization factor 1/n
+
+    ### YOUR CODE BEGINS HERE ###
+    
+    
+    h = torch.matmul(X,w)
+    p = Y -h
+    q = torch.square(p)
+
+    res = torch.mean(q)
+
+    d = torch.abs(w)
+
+    g = torch.sum(d)
+
+
+    g = torch.mul(g,lambd)
+
+
+    result = torch.add(res,g)
+
+    loss = result
+
+
+    ### YOUR CODE ENDS HERE ###
+
+    return (loss)
+
+
+def lasso_loss_derivative(X, Y, w, lambd):
+    '''
+    @params
+        X : 2D tensor of size(n,d)
+        n : no of samples for the X dataset
+        d : dimension of each sample vector x(i)
+        Y : 1D tensor of size(n,1)
+        w : 1D tensor of size(d,1)
+        lambd : regularization parameter
+    return derivative : 1D tensor of size(d,1)
+    '''
+
+    w = w.double()
+    derivative = None
+
+    # Student code start TASK 2 : Write lasso-loss-derivative in form of X, Y, w matrices
+    # Please take care of normalization factor 1/n
+
+    ### YOUR CODE BEGINS HERE ### 
+
+    h = torch.matmul(X, w)
+    error = Y-h
+    n = len(error)
+
+
+    mse = -2 * torch.matmul(X.t(),error) 
+    mse = torch.div(mse,n)
+    
+    p = lambd * torch.sign(w)
+
+    derivative = mse + p
+    
+
+    ### YOUR CODE ENDS HERE ###
+
+    return derivative
+
+def train_model(X_train, Y_train, X_test, Y_test, w, eta):
+    '''
+    @params
+        X_train : 2D tensor of size(n,d) over which model is trained
+        Y_train : 1D tensor of size(n,1) over which model is trained
+        X_test : 2D tensor of size(m,d) for testing
+        Y_test : 1D tensor of size(m,1) for testing
+        w : initial weights vector (that needs to be optimized using gradient descent)
+        eta : learning rate
+    @returns
+        w : 1D tensor of size(d,1) , the final optimized w
+        test_err : python list containing the l2-loss at each iteration
+    '''
+
+    epsilon = 1e-8  # Stopping precision
+    lambd = 1e-3  # Regularization parameter
+    old_loss = float('inf')
+    test_err = []
+
+    while True:
+        loss = lasso_loss(X_train, Y_train, w, lambd)
+        dw = lasso_loss_derivative(X_train, Y_train, w, lambd)
+        w = w - eta * dw
+
+        # Calculate test error for monitoring
+        test_err.append(lasso_loss(X_test, Y_test, w, lambd))
+
+        # Check for convergence
+        if abs(loss - old_loss) < epsilon:
+            break
+
+        old_loss = loss
+
+    return w, test_err
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, help="The name of the dataset to be used" )
+    parser.add_argument('--seed', type=int, default=335)
+    parser.add_argument('--eta', type=float, default=1e-3)
+    args = parser.parse_args()
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+
+    data = pd.read_csv(args.dataset, index_col=0)
+
+    data_train, data_test = train_test_split(data)
+
+    X_train = torch.from_numpy(data_train.iloc[:, :-1].to_numpy())
+    Y_train = torch.from_numpy(data_train.iloc[:, -1].to_numpy()).unsqueeze(1)
+
+    X_test = torch.from_numpy(data_test.iloc[:, :-1].to_numpy())
+    Y_test = torch.from_numpy(data_test.iloc[:, -1].to_numpy()).unsqueeze(1)
+
+    d = X_train.shape[1]
+
+    w = torch.randn(d, 1)
+    eta = args.eta
+    w_trained, test_err = train_model(X_train, Y_train, X_test, Y_test, w, eta)
+    w_trained = w_trained.detach().numpy().squeeze(axis=1)
+    print(w_trained)
+    np.savetxt('w_trained.txt', w_trained, fmt="%f")
+    test_err = np.array(test_err)
+    np.savetxt('test_err.txt', test_err, fmt="%f")
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import argparse
+import torch 
+
+
+def plot_contour_diagram(X, y):
+    '''
+    @params
+        X : 2D numpy array of size(n,d)
+        n : no of samples for the X dataset
+        d : dimension of each sample vector x(i)
+        y : 1D numpy array of size(n,1)
+    '''
+    n,d = X.shape
+    dim = 200
+    a = np.linspace(0, 8, dim).reshape(-1,1)
+    b = np.linspace(0, 8, dim).reshape(-1,1)
+
+    A, B = np.meshgrid(a, b)
+
+    MSE = np.sum(np.square((y.reshape(1,1,-1) - (a @ X[:,0].reshape(1,-1)).reshape(1,dim,-1) - (b @ X[:,1].reshape(1,-1)).reshape(dim,1,-1))), axis=2)/n
+
+    fig, ax = plt.subplots()
+    levels = np.square(np.arange(0, 4, 0.25))
+    CS = ax.contour(A, B, MSE, levels)
+    ax.clabel(CS, fontsize=9, inline=True)
+
+
+
+def w_closed_form(X, Y):
+    '''
+    @params
+        X : 2D array of shape(n,d)
+        n : no of samples for the X dataset
+        d : dimension of each sample vector x(i)
+        Y : 1D array of shape(n,1)
+    calculates w_closed : 1D array of shape(d,1)
+    writes the w_closed as a numpy array into the text file "w_closed.txt"
+    returns w_closed
+    '''
+
+    # Student code start TASK 1 : Write w_closed in form of X, Y matrices
+    # Round w_closed upto 4 decimal places
+    # w_closed = YOUR CODE HERE
+
+    
+    
+    g = np.array(X)
+    g = X.transpose()
+    h = np.matmul(g,X)
+    j = np.linalg.inv(h)
+    j = np.matmul(j,g)
+    w_closed = np.matmul(j,Y)
+    w_closed = np.round(w_closed,decimals = 4)
+    
+    # Student code end
+    
+    # print(w_closed)
+    np.savetxt('w_closed.txt', w_closed, fmt="%f")
+    return w_closed
+
+
+
+
+
+def l2_loss_derivative(X, Y, w):
+    '''
+    @params
+        X : 2D array of size(n,d)
+        n : no of samples for the X dataset
+        d : dimension of each sample vector x(i)
+        Y : 1D array of size(n,1)
+        w : 1D array of size(d,1)
+    return derivative : 1D array of size(d,1)
+    '''
+
+    # Student code start TASK 3 : Write l2-loss-derivative in form of X, Y, w matrices
+    # Please take care of normalization factor 1/n
+
+    # derivative = YOUR CODE HERE
+
+    # Student code end
+    
+    n = len(Y)
+    
+    g = np.array(X)
+    g = X.transpose()
+   
+    h = np.matmul(g,X)
+
+    p = np.matmul(h,w)
+
+    b = np.matmul(g,Y)
+
+    p = np.subtract(p,b)
+
+    derivative = np.divide(p,n)
+
+    return (derivative)
+
+def l2_loss_derivative_at_point(X,y,w):
+    """
+    X : 2d array 
+    y : 1 scalar
+    d: dimension of ith value of X
+    
+    """
+    
+    print(X)
+
+    
+    g = np.array(X)
+    g = X.transpose()
+
+    h = np.matmul(X,g)
+
+    p = np.matmul(h,w)
+
+    b = g*y
+
+    p = np.subtract(p,b)
+
+    derivative = p
+
+    return (derivative)
+
+
+def gradient_descent(X, y, eta, max_steps):
+    '''
+    @params
+        X : 2D numpy array of size(n,d)
+        n : no of samples for the X dataset
+        d : dimension of each sample vector x(i)
+        y : 1D numpy array of size(n,1)
+        eta : learning rate
+        max_steps : no of steps to run gradient descent
+    @returns
+        w_values : 2D numpy array of size(max_steps+1, d)
+    '''
+    n,d = X.shape
+    w = np.zeros((d,1))
+    # w = w_closed_form(X,y)
+
+    w_values = []
+    w_values.append(w)
+
+    ### TASK 1 : Write gradient descent code here ###
+
+    ### YOUR CODE BEGINS HERE ###
+
+    step = 0
+
+
+
+    while step < max_steps:
+        dw = l2_loss_derivative(X,y,w)
+        w = w - eta*dw
+        w_values.append(w)
+        step = step+1
+
+
+    ### YOUR CODE ENDS HERE ###
+
+    w_values = np.array(w_values).reshape(-1,d)
+    
+
+    assert w_values.shape == (max_steps+1, d)
+    return w_values
+
+
+def stochastic_gradient_descent(X, y, eta, max_steps):
+    '''
+    @params
+        X : 2D numpy array of size(n,d)
+        n : no of samples for the X dataset
+        d : dimension of each sample vector x(i)
+        y : 1D numpy array of size(n,1)
+        eta : learning rate
+        max_steps : no of steps to run gradient descent
+    @returns
+        w_values : 2D numpy array of size(max_steps+1, d)
+    '''
+    n,d = X.shape
+    w = np.zeros((d,1))
+
+
+
+    w_values = []
+    w_values.append(w)
+
+    ### TASK 1 : Write stochastic gradient descent code here ###
+
+    ### YOUR CODE BEGINS HERE ###
+    step = 0
+
+   
+    
+    while step < max_steps:
+        # dw = l2_loss_derivative_at_point(X[step],y[step],w)
+        dw = -2 * X[step].reshape(-1, 1) * (y[step] - np.matmul(X[step], w))
+        
+        w = w - eta*dw
+        w_values.append(w)
+        step = step+1
+
+    ### YOUR CODE ENDS HERE ###
+
+    w_values = np.array(w_values).reshape(-1,d)
+
+    assert w_values.shape == (max_steps+1, d)
+    return w_values.reshape(-1,d)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, help="The name of the dataset to be used" )
+    parser.add_argument('--eta', type=float, default=1e-3)
+    parser.add_argument('--steps', type=int, default=40)
+    args = parser.parse_args()
+
+    data = pd.read_csv(args.dataset)
+
+    X = data[['x_1', 'x_2']].to_numpy()
+    y = data['y'].to_numpy().reshape(-1,1)
+
+
+    w_values = gradient_descent(X, y, args.eta, args.steps)
+    np.savetxt('w_values_GD.csv', w_values, delimiter=',')
+
+    plot_contour_diagram(X, y)
+    plt.scatter(w_values[:,0], w_values[:,1], c='r', marker='x', label='GD')
+    plt.ylabel('w_2')
+    plt.xlabel('w_1')
+    plt.title('Gradient Descent')
+    plt.savefig('contour_plot_GD.png')
+    
+
+    w_values = stochastic_gradient_descent(X, y, args.eta, args.steps)
+    np.savetxt('w_values_SGD.csv', w_values, delimiter=',')
+
+    plot_contour_diagram(X, y)
+    plt.scatter(w_values[:,0], w_values[:,1], c='b', marker='x', label='SGD')
+    plt.ylabel('w_2')
+    plt.xlabel('w_1')
+    plt.title('Stochastic Gradient Descent')
+    plt.savefig('contour_plot_SGD.png')
