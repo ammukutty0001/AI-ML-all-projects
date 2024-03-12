@@ -1,0 +1,506 @@
+import numpy as np
+
+import random
+
+import math
+
+import matplotlib.pyplot as plt
+
+import os
+
+import pandas as pd
+
+import argparse 
+
+
+def seed_everything(seed=42):
+
+    random.seed(seed)
+
+    np.random.seed(seed)
+
+
+def make_directory_structure(): 
+
+    os.makedirs('./images/average', exist_ok=True)
+
+    os.makedirs('./images/vanilla', exist_ok=True)
+
+
+def plot_decision_boundary(x, y, w, name="boundary"):
+
+    plt.figure()
+
+    plt.scatter(x[y == -1][:,0], x[y == -1][:,1], c='blue')
+
+    plt.scatter(x[y == 1][:,0], x[y == 1][:,1], c='red')
+
+    plt.axline((0, -w[-1] / w[1]), (1, -(w[0] + w[-1]) / w[1]), c='black', marker='o')
+
+    plt.savefig(f"{name}.png")
+
+
+def test_train_split(x, y, frac=0.8):
+
+    cut = math.trunc(frac * x.shape[0])
+
+    return x[:cut], y[:cut], x[cut:], y[cut:]
+
+
+class Perceptron():
+
+    def __init__(self, input_dim, lam=0.8):
+
+        self.weights = np.zeros(input_dim + 1)
+
+        self.running_avg_weights = self.weights
+
+        self.lam = lam
+
+    
+
+    def fit(self, x, y, plot_flag, lr=0.001, epochs=100):
+
+        weights_history = []
+
+        avg_weights_history = []
+
+
+        # Concatenate 1's at the end of x to make it of the shape (data_size, input_dim+1) for bias term
+
+        x_with_bias = np.concatenate((x, np.ones((len(x), 1))), axis=1)
+
+        
+
+        for epoch in range(epochs):
+
+            # Calculate y_pred directly using x_with_bias and self.weights
+
+            y_pred = np.sign(np.dot(x_with_bias, self.weights))
+
+
+            # Compute the sum of ηyixi across all xi’s that result in a misclassification using wt
+
+            delta = lr * np.dot((y - y_pred), x_with_bias)
+
+
+            # Update the weight vector
+
+            self.weights += delta
+
+
+            # Update the running average of weights
+
+            self.running_avg_weights = self.lam * self.running_avg_weights + (1 - self.lam) * self.weights
+
+
+            # Plotting the decision boundary at this epoch
+
+            if plot_flag:
+
+                plot_decision_boundary(x, y, self.get_decision_boundary(False), f"images/vanilla/{epoch:05d}")  
+
+                plot_decision_boundary(x, y, self.get_decision_boundary(True), f"images/average/{epoch:05d}")
+
+
+            if epoch % 10 == 0:
+
+                print(f"Epoch: {epoch}, Vanilla: {self.get_decision_boundary(False)}, Running Average: {self.get_decision_boundary(True)}")
+
+                weights_history.append(self.weights)
+
+                avg_weights_history.append(self.running_avg_weights)
+
+
+        return weights_history, avg_weights_history
+
+    
+
+    def predict(self, x, running_avg=False):
+
+        # Concatenate 1's at the end of x to make it of the shape (data_size, input_dim+1) for bias term   
+
+        x_with_bias = np.concatenate((x, np.ones((len(x), 1))), axis=1)
+
+
+        # Make y_pred using either the final weight vector or the moving average of the weights
+
+        if running_avg:
+
+            y_pred = np.sign(np.dot(x_with_bias, self.running_avg_weights))
+
+        else:
+
+            y_pred = np.sign(np.dot(x_with_bias, self.weights))
+
+
+        return y_pred
+
+    
+
+    def get_decision_boundary(self, running_avg = False):
+
+        '''
+
+            Input: running_avg: bool: choose whether to use the running average weights for prediction
+
+            Output: np.ndarray of shape (input_dim+1,) representing the decision boundary
+
+        '''
+
+        if running_avg:
+
+            return self.running_avg_weights
+
+        else:
+
+            return self.weights
+
+
+def accuracy(y_test, y_pred):
+
+    correct_predictions = np.sum(y_test == y_pred)
+
+    total_samples = len(y_test)
+
+    acc = correct_predictions / total_samples
+
+    return acc
+
+
+if __name__ == "__main__":
+
+    seed_everything()
+
+    make_directory_structure()
+
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--dataset', type=str, help="The name of the dataset to be used", required=True)
+
+    args = parser.parse_args()
+
+
+    input_dim = 2
+
+
+    df = pd.read_csv(args.dataset)
+
+    x = df[['x1', 'x2']].values
+
+    y = df['y'].values
+
+
+    x_train, y_train, x_test, y_test = test_train_split(x, y)
+
+
+    p = Perceptron(input_dim)
+
+    p.fit(x_train, y_train, False)
+
+
+    y_pred = p.predict(x_test, False)
+
+    acc = accuracy(y_test, y_pred)
+
+    print(f"Vanilla prediction test accuracy: {acc:.4f}")
+
+
+    y_pred = p.predict(x_test, True)
+
+    acc= accuracy(y_test, y_pred)
+
+    print(f"Running average prediction test accuracy: {acc:.4f}")
+
+
+
+import numpy as np
+
+import random
+
+import math
+
+import matplotlib.pyplot as plt
+
+import os
+
+import pandas as pd
+
+import argparse
+
+
+def seed_everything(seed=42):
+
+    random.seed(seed)
+
+    np.random.seed(seed)
+
+
+def make_directory_structure(): 
+
+    os.makedirs('./images/vanilla', exist_ok=True)
+
+
+def plot_decision_boundary(x, y, w, name="boundary"):
+
+    plt.figure()
+
+    plt.scatter(x[y == -1][:,0], x[y == -1][:,1], c=['blue'])
+
+    plt.scatter(x[y == 1][:,0], x[y == 1][:,1], c=['red'])
+
+    plt.axline((0,-w[-1]/w[1]), (1,-(w[0]+w[-1])/w[1]), c='black', marker='o')
+
+    plt.savefig(f"{name}.png")
+
+
+def test_train_split(x, y, frac=0.2):
+
+    '''
+
+    Input: x: np.ndarray: features of shape (data_size, input_dim)
+
+           y: np.ndarray: labels of shape (data_size,)
+
+           frac: float: fraction of dataset to be used for test set
+
+    Output: x_train, y_train, x_test, y_test
+
+    '''
+
+    cut = math.trunc(frac * x.shape[0])
+
+    return x[:cut], y[:cut], x[cut:], y[cut:]
+
+
+def hinge_loss_gradient(x_appended, y, w): 
+
+    '''
+
+    Input: x_appended: datapoint at which gradient is to be calculated of shape (input_dim+1,)
+
+           y: label - scalar
+
+           w: np.ndarray: shape (input_dim+1,)
+
+    Output: np.ndarray: gradient of hinge loss with respect to w of shape (input_dim+1,)
+
+    '''
+
+    # Calculate the hinge loss
+
+    
+
+    z = y * np.dot(x_appended, w)
+
+    
+
+    # Initialize gradient vector
+
+    grad = np.zeros_like(w)
+
+    
+
+    # Compute the gradient based on the margin
+
+    if z < 1:
+
+        grad = -y * x_appended
+
+
+    
+
+    return grad
+
+
+class Perceptron():
+
+    def __init__(self, input_dim, lam=0.8):
+
+        '''
+
+        Input: input_dim: int: size of input
+
+               lam: float: parameter of geometric moving average. Moving average is calculated as
+
+                        a_{t+1} = lam*a_t + (1-lam)*w_{t+1}
+
+        '''
+
+        self.weights = np.zeros(input_dim + 1)
+
+        self.running_avg_weights = self.weights
+
+        self.lam = lam
+
+    
+
+    def fit(self, x, y, plot_flag, lr=0.001, epochs=50):
+
+            '''
+
+                Input: x: np.ndarray: training features of shape (data_size, input_dim)
+
+                    y: np.ndarray: training labels of shape (data_size,)
+
+                    lr: float: learning rate
+
+                    epochs: int: number of epochs
+
+                Output weights_history: list of np.ndarray: list of weights at each epoch
+
+            '''
+
+            n, d = x.shape
+
+            weights_history = []
+
+            seed_everything()
+
+
+            # Concatenate 1's at the end of x to make it of shape (data_size, input_dim+1)
+
+            x_appended = np.c_[x, np.ones(n)]
+
+
+            for epoch in range(epochs):
+
+                for i in range(n):
+
+                    # Randomly choose an index
+
+                    index = np.random.randint(n)
+
+                    x_i = x_appended[index]
+
+                    y_i = y[index]
+
+
+                    # Calculate gradient of hinge loss
+
+    
+
+                    gradient = hinge_loss_gradient(x_i, y_i, self.weights)
+
+
+                        # Update weights
+
+                    self.weights -= lr * gradient
+
+
+                # Append weights to history outside the inner loop for each epoch
+
+                    weights_history.append(self.weights.copy())  # copy to avoid reference issues
+
+
+                if plot_flag and epoch % 5 == 0:
+
+                    plot_decision_boundary(x_appended, y, self.get_decision_boundary(False), f"images/vanilla/{epoch:05d}")
+
+
+                if epoch % 5 == 0:
+
+                    print(f"Epoch: {epoch}, Decision Boundary: {self.get_decision_boundary(False)}")
+
+            print(weights_history[0])
+
+            return weights_history
+
+
+
+
+    def predict(self, x, running_avg=False):
+
+        # Concatenate 1's at the end of x to make it of the shape (data_size, input_dim+1) for bias term   
+
+        x_with_bias = np.concatenate((x, np.ones((len(x), 1))), axis=1)
+
+
+        # Make y_pred using either the final weight vector or the moving average of the weights
+
+        if running_avg:
+
+            y_pred = np.sign(np.dot(x_with_bias, self.running_avg_weights))
+
+        else:
+
+            y_pred = np.sign(np.dot(x_with_bias, self.weights))
+
+
+        return y_pred
+
+    
+
+    def get_decision_boundary(self, running_avg=False):
+
+        '''
+
+        Input: running_avg: bool: choose whether to use the running average weights for prediction
+
+        Output: np.ndarray of shape (input_dim+1,) representing the decision boundary
+
+        '''
+
+        if running_avg:
+
+            return self.running_avg_weights
+
+        else:
+
+            return self.weights
+
+
+
+def accuracy(y_test, y_pred):
+
+    correct_predictions = np.sum(y_test == y_pred)
+
+    total_samples = len(y_test)
+
+    acc = correct_predictions / total_samples
+
+    return acc
+
+
+if __name__ == "__main__":
+
+    seed_everything()
+
+    make_directory_structure()
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--dataset', type=str, help="The name of the dataset to be used", required=True)
+
+    args = parser.parse_args()
+
+
+    input_dim = 2
+
+
+    df = pd.read_csv(args.dataset)
+
+    x = df[['x1', 'x2']].values
+
+    y = df['y'].values
+
+    x_train, y_train, x_test, y_test = test_train_split(x, y)
+
+
+    p = Perceptron(input_dim)
+
+    # Fit the perceptron on the train set
+
+    p.fit(x_train, y_train, False)
+
+
+    # Predict on the test set using the last weight vector and print accuracy
+
+    y_pred = p.predict(x_test, False)
+
+    acc = accuracy(y_test, y_pred)
+
+    
+
+    print(f"Prediction test accuracy: {acc:.4f}")
